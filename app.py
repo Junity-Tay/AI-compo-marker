@@ -1,6 +1,5 @@
 import streamlit as st
 import numpy as np
-#import cv2 
 from paddleocr import PaddleOCR
 from PIL import Image
 
@@ -8,25 +7,42 @@ st.title("Composition Text Extraction with PaddleOCR")
 
 @st.cache_resource
 def load_ocr():
-  return PaddleOCR(use_angle_cls=True, lang="en")
+    return PaddleOCR(
+        lang="en",
+        use_doc_orientation_classify=False,
+        use_doc_unwarping=False,
+        use_textline_orientation=False,
+        device="cpu"
+    )
 
 ocr = load_ocr()
 
-uploaded_image = st.file_uploader("Upload your composition", type=['png', 'jpg', 'jpeg'])
+uploaded_image = st.file_uploader(
+    "Upload your composition",
+    type=["png", "jpg", "jpeg"]
+)
 
 if uploaded_image is not None:
-  image = Image.open(uploaded_image)
-  img_array = np.array(image)
+    image = Image.open(uploaded_image).convert("RGB")
+    img_array = np.array(image)
 
-  result = reader.readtext(img_array)
+    st.image(image, caption="Uploaded Composition", use_container_width=True)
 
-  st.subheader("Extracted Text:")
-  extracted_text = ""
-  for detection in result:
-    extracted_text += detection[1] + "\n"
-  st.text(extracted_text)
+    with st.spinner("Reading handwriting / text with PaddleOCR..."):
+        result = ocr.predict(img_array)
 
-  for detection in result:
-      top_left = tuple([int(val) for val in detection[0][0]])
-      bottom_right = tuple([int(val) for val in detection[0][2]])
-      img_cv2 = cv2.rectangle(img_cv2, top_left, bottom_right, (0, 255, 0), 3)
+    extracted_lines = []
+
+    for res in result:
+        data = res.json
+
+        # PaddleOCR usually stores recognised text here:
+        if "res" in data and "rec_texts" in data["res"]:
+            extracted_lines.extend(data["res"]["rec_texts"])
+        elif "rec_texts" in data:
+            extracted_lines.extend(data["rec_texts"])
+
+    extracted_text = "\n".join(extracted_lines)
+
+    st.subheader("Extracted Text:")
+    st.text_area("OCR Result", extracted_text, height=300)
