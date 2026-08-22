@@ -26,7 +26,7 @@ if uploaded_image is not None:
     image = Image.open(uploaded_image).convert("RGB")
     img_array = np.array(image)
 
-    st.image(image, caption="Uploaded Composition", use_container_width=True)
+    st.image(image, caption="Uploaded Composition", width='stretch')
 
     with st.spinner("Reading handwriting / text with PaddleOCR..."):
         result = ocr.predict(img_array)
