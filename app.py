@@ -11,7 +11,7 @@ def extract_text(image_bytes, mime_type):
     base64_image = base64.b64encode(image_bytes).decode("utf-8")
 
     response = client.responses.create(
-        model="gpt-5.5",
+        model="gpt-5.6-luna",
         input=[
             {
                 "role": "user",
