@@ -1,21 +1,41 @@
+import base64
 import streamlit as st
-import numpy as np
-from paddleocr import PaddleOCR
+from openai import OpenAI
 from PIL import Image
 
-st.title("Composition Text Extraction with PaddleOCR")
+st.title("Composition Text Extraction with OpenAI OCR")
 
-@st.cache_resource
-def load_ocr():
-    return PaddleOCR(
-        lang="en",
-        use_doc_orientation_classify=False,
-        use_doc_unwarping=False,
-        use_textline_orientation=False,
-        device="cpu"
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+def extract_text(image_bytes, mime_type):
+    base64_image = base64.b64encode(image_bytes).decode("utf-8")
+
+    response = client.responses.create(
+        model="gpt-5.5",
+        input=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "input_text",
+                        "text": (
+                            "Extract all handwritten text from this composition image."
+                            "Return only the extracted text. Preserve the paragraph and line breaks."
+                            "Do not correct spelling, grammar, punctuation, or wording."
+                        ),
+                    },
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:{mime_type};base64,{base64_image}",
+                        "detail":"original",
+                    },
+                ],
+            }
+        ],
     )
 
-ocr = load_ocr()
+    return response.output_text
+        
 
 uploaded_image = st.file_uploader(
     "Upload your composition",
@@ -23,26 +43,14 @@ uploaded_image = st.file_uploader(
 )
 
 if uploaded_image is not None:
+    image_bytes = uploaded_image.getvalue()
+    mime_type = uploaded_image.type or "image/png"
+    
     image = Image.open(uploaded_image).convert("RGB")
-    img_array = np.array(image)
-
     st.image(image, caption="Uploaded Composition", width="stretch")
 
-    with st.spinner("Reading handwriting / text with PaddleOCR..."):
-        result = ocr.predict(img_array)
-
-    extracted_lines = []
-
-    for res in result:
-        data = res.json
-
-        # PaddleOCR usually stores recognised text here:
-        if "res" in data and "rec_texts" in data["res"]:
-            extracted_lines.extend(data["res"]["rec_texts"])
-        elif "rec_texts" in data:
-            extracted_lines.extend(data["rec_texts"])
-
-    extracted_text = "\n".join(extracted_lines)
+    with st.spinner("Reading handwriting / text with OpenAI..."):
+        extracted_text = extract_text(image_bytes, mime_type)
 
     st.subheader("Extracted Text:")
     st.text_area("OCR Result", extracted_text, height=300)
