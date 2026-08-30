@@ -88,10 +88,10 @@ if uploaded_image is not None:
     st.subheader("Extracted Text:")
     st.text_area("OCR Result", extracted_text, height=300)
 
-st.divider()
+    st.divider()
 
-if st.button("Get Composition Feedback"):
-    with st.spinner("Marking in progress..."):
-        feedback = get_feedback()
-    st.subheader("Compo Feedback")
-    st.write(feedback)
+    if st.button("Get Composition Feedback"):
+        with st.spinner("Marking in progress..."):
+            feedback = get_feedback()
+        st.subheader("Compo Feedback")
+        st.write(feedback)
